@@ -43,7 +43,8 @@ class EnemyItem(InLevelObject):
 
         if self.obj_index == OBJ_AUTOSCROLL:
             self.auto_scroll_type = data[2]
-            data[2] = 0
+            #TODO: show correctly in toolbar
+            #data[2] = 0
         else:
             self.auto_scroll_type = 0
 
@@ -116,8 +117,9 @@ class EnemyItem(InLevelObject):
         x = max(0, x)
         y = max(0, y)
 
-        if self._is_auto_scroll():
-            y = 0
+        #TODO: show correctly in toolbar
+        #if self._is_auto_scroll():
+        #    y = 0
 
         self.x_position = x
         self.y_position = y
