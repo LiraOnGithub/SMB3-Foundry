@@ -62,7 +62,7 @@ class AutoScrollDrawer:
             self._spike_ceiling_scroll(painter, block_length)
             return
         elif auto_scroll_type_index == UP_TIL_DOOR_SCROLL:
-            # not visualized
+            self._up_til_door_scroll(painter, block_length)
             return
         elif auto_scroll_type_index == WATER_LEVEL_SCROLL:
             # not visualized
@@ -323,6 +323,25 @@ class AutoScrollDrawer:
         lineBottom = QPointF(Block.WIDTH // 2, self.level.height * Block.HEIGHT - Block.HEIGHT * 2)
         lineTop = lineBottom - QPointF(0, difference)
 
+        painter.drawEllipse(lineTop, 4 * self.pixel_length, 4 * self.pixel_length)
+        painter.drawLine(lineTop, lineBottom)
+        painter.drawEllipse(lineBottom, 4 * self.pixel_length, 4 * self.pixel_length)
+    def _up_til_door_scroll(self, painter: QPainter, block_length: int):
+        # TODO: where to place in constants?
+        limitInRom = 0x13D3E
+        limit = self.rom.int(limitInRom)
+        screenHeight = _ASCROLL_SCREEN_HEIGHT * Block.HEIGHT - Block.HEIGHT * 2
+
+        painter.setPen(self.scroll_pen)
+        painter.setBrush(self.scroll_brush)
+        painter.setOpacity(0.2)
+        painter.drawRect(0, limit, self.level.width * Block.WIDTH, screenHeight)
+        painter.setOpacity(1)
+
+        lineTop = QPointF(Block.WIDTH // 2, limit + screenHeight)
+        lineBottom = QPointF(Block.WIDTH // 2, self.level.height * Block.HEIGHT - Block.HEIGHT * 2)
+        painter.setPen(self.acceleration_pen)
+        painter.setBrush(self.acceleration_brush)
         painter.drawEllipse(lineTop, 4 * self.pixel_length, 4 * self.pixel_length)
         painter.drawLine(lineTop, lineBottom)
         painter.drawEllipse(lineBottom, 4 * self.pixel_length, 4 * self.pixel_length)

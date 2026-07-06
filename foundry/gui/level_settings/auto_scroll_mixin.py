@@ -20,7 +20,7 @@ AUTOSCROLL_LABELS = {
     1: "Horizontal Autoscroll",
     2: "Moves Level up and right; screen wraps, vertically",
     3: "Moves ceiling down and up (Fortress Spike Levels)",
-    4: "Moves ground up, until a door hits the ground",
+    4: "Moves ground up once",
     5: "Moves ground up and down, used for changes in over-water Levels",
 }
 
