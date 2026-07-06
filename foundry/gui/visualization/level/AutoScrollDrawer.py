@@ -260,56 +260,25 @@ class AutoScrollDrawer:
         self.current_pos = self._determine_auto_scroll_start(block_length)
 
         limits = [(0x70, 0xD0), (0x60, 0xC0), (0x90, 0x30), (0xF0, 0x00)]
-        h_acceleration = 8
-        v_acceleration = -8
 
-        stop_marker = QRectF(QPoint(0, 0), QSizeF(10, 10) * self.pixel_length)
 
         for (upper, lower) in limits:
             self._diagonal_auto_scroll_climb(painter)
-            #old_pos = QPointF(self.current_pos)
 
-            ## Every two frames x gets increased by 1 and y decreased by 1, until we hit the top of the screen
-            #offsetToTop = self.current_pos.y() - (_ASCROLL_SCREEN_HEIGHT // 2 * Block.WIDTH)
-            #if offsetToTop > 0:
-            #    self.current_pos += QPointF(1, -1) * offsetToTop
-            #    painter.setPen(self.scroll_pen)
-            #    painter.setBrush(self.scroll_brush)
-            #    painter.drawLine(old_pos, self.current_pos)
-            #    self._add_points_for_line(old_pos, self.current_pos)
-
-            old_pos = QPointF(self.current_pos)
-            while int(self.current_pos.x() - LEVEL_SCREEN_WIDTH // 2 * block_length) & 0xF0 != upper:
-                self.current_pos += QPointF(1, 0)
-            painter.setPen(self.acceleration_pen)
-            painter.setBrush(self.acceleration_brush)
-            painter.drawLine(old_pos, self.current_pos)
-            self._add_points_for_line(old_pos, self.current_pos)
-            stop_marker.moveCenter(self.current_pos)
-            painter.setPen(Qt.PenStyle.NoPen)
-            painter.drawRect(stop_marker)
+            self._diagonal_auto_scroll_fast_forward(painter, upper)
 
             self.current_pos.setY(336)
-            old_pos = QPointF(self.current_pos)
-            stop_marker.moveCenter(self.current_pos)
-            painter.setPen(Qt.PenStyle.NoPen)
-            painter.drawRect(stop_marker)
-            while int(self.current_pos.x() - LEVEL_SCREEN_WIDTH // 2 * block_length) & 0xF0 != lower:
-                self.current_pos += QPointF(1, 0)
-            painter.setPen(self.acceleration_pen)
-            painter.setBrush(self.acceleration_brush)
-            painter.drawLine(old_pos, self.current_pos)
-            self._add_points_for_line(old_pos, self.current_pos)
 
+            self._diagonal_auto_scroll_fast_forward(painter, lower)
+
+        # Last climb
         self._diagonal_auto_scroll_climb(painter)
-        #old_pos = QPointF(self.current_pos)
-        #offsetToTop = self.current_pos.y() - (_ASCROLL_SCREEN_HEIGHT // 2 * Block.WIDTH)
-        #if offsetToTop > 0:
-        #    self.current_pos += QPointF(1, -1) * offsetToTop
-        #    painter.setPen(self.scroll_pen)
-        #    painter.setBrush(self.scroll_brush)
-        #    painter.drawLine(old_pos, self.current_pos)
-        #    self._add_points_for_line(old_pos, self.current_pos)
+
+		# Stop
+        stop_marker = QRectF(QPoint(0, 0), QSizeF(10, 10) * self.pixel_length)
+        stop_marker.moveCenter(self.current_pos)
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.drawRect(stop_marker)
 
         painter.setPen(self.scroll_pen)
         painter.setBrush(self.scroll_brush)
@@ -318,11 +287,26 @@ class AutoScrollDrawer:
         painter.drawPolygon(self.screen_polygon)
 
     def _diagonal_auto_scroll_climb(self, painter: QPainter):
+        # Every two frames: x++ and y--, until we hit the top of the screen
+        painter.setPen(self.scroll_pen)
+        painter.setBrush(self.scroll_brush)
+        painter.drawEllipse(self.current_pos, 4 * self.pixel_length, 4 * self.pixel_length)
         old_pos = QPointF(self.current_pos)
         offsetToTop = self.current_pos.y() - (_ASCROLL_SCREEN_HEIGHT // 2 * Block.WIDTH)
         if offsetToTop > 0:
             self.current_pos += QPointF(1, -1) * offsetToTop
-            painter.setPen(self.scroll_pen)
-            painter.setBrush(self.scroll_brush)
             painter.drawLine(old_pos, self.current_pos)
             self._add_points_for_line(old_pos, self.current_pos)
+
+    def _diagonal_auto_scroll_fast_forward(self, painter: QPainter, limit: int):
+        old_pos = QPointF(self.current_pos)
+        painter.setPen(self.acceleration_pen)
+        painter.setBrush(self.acceleration_brush)
+        painter.drawEllipse(self.current_pos, 4 * self.pixel_length, 4 * self.pixel_length)
+        while int(self.current_pos.x() - LEVEL_SCREEN_WIDTH // 2 * Block.WIDTH) & 0xF0 != limit:
+            self.current_pos += QPointF(1, 0)
+        painter.setPen(self.acceleration_pen)
+        painter.setBrush(self.acceleration_brush)
+        painter.drawLine(old_pos, self.current_pos)
+        self._add_points_for_line(old_pos, self.current_pos)
+        painter.drawEllipse(self.current_pos, 4 * self.pixel_length, 4 * self.pixel_length)
