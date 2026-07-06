@@ -259,10 +259,11 @@ class AutoScrollDrawer:
 
         self.current_pos = self._determine_auto_scroll_start(block_length)
 
-        limits = [(0x70, 0xD0), (0x60, 0xC0), (0x90, 0x30), (0xF0, 0x00)]
+        limitIndexes = [(0, 1), (2, 3), (4, 5), (6, 7)]
 
-
-        for (upper, lower) in limits:
+        for (upperIndex, lowerIndex) in limitIndexes:
+            upper = self.rom.int(Constants.AutoScroll_URDiagonalLimits + upperIndex)
+            lower = self.rom.int(Constants.AutoScroll_URDiagonalLimits + lowerIndex)
             self._diagonal_auto_scroll_climb(painter)
 
             self._diagonal_auto_scroll_fast_forward(painter, upper)
@@ -274,7 +275,7 @@ class AutoScrollDrawer:
         # Last climb
         self._diagonal_auto_scroll_climb(painter)
 
-		# Stop
+        # Stop
         stop_marker = QRectF(QPoint(0, 0), QSizeF(10, 10) * self.pixel_length)
         stop_marker.moveCenter(self.current_pos)
         painter.setPen(Qt.PenStyle.NoPen)
