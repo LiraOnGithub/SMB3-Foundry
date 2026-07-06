@@ -52,21 +52,19 @@ class AutoScrollDrawer:
         painter.setBrush(self.scroll_brush)
 
         auto_scroll_type_index = self.auto_scroll_row >> 4
-        auto_scroll_routine_index = self.auto_scroll_row & 0b0001_1111
-
         if auto_scroll_type_index in [HORIZONTAL_SCROLL_0, HORIZONTAL_SCROLL_1]:
-            self._horizontal_auto_scroll(painter, auto_scroll_type_index, auto_scroll_routine_index, block_length)
-
+            self._horizontal_auto_scroll(painter, block_length)
+            return
         elif auto_scroll_type_index == UP_RIGHT_DIAG_SCROLL:
-            #self._horizontal_auto_scroll(painter, auto_scroll_type_index, auto_scroll_routine_index, block_length)
             self._diagonal_auto_scroll(painter, block_length)
             return
-
-        elif auto_scroll_type_index in [
-            SPIKE_CEILING_SCROLL,
-            UP_TIL_DOOR_SCROLL,
-            WATER_LEVEL_SCROLL,
-        ]:
+        elif auto_scroll_type_index == SPIKE_CEILING_SCROLL:
+            self._spike_ceiling_scroll(painter, block_length)
+            return
+        elif auto_scroll_type_index == UP_TIL_DOOR_SCROLL:
+            # not visualized
+            return
+        elif auto_scroll_type_index == WATER_LEVEL_SCROLL:
             # not visualized
             return
 
@@ -75,7 +73,8 @@ class AutoScrollDrawer:
             return
 
 
-    def _horizontal_auto_scroll(self, painter: QPainter, auto_scroll_type_index: int, auto_scroll_routine_index: int, block_length: int):
+    def _horizontal_auto_scroll(self, painter: QPainter, block_length: int):
+        auto_scroll_routine_index = self.auto_scroll_row & 0b0001_1111
         first_movement_command_index = (
             self.rom.int(Constants.AScroll_HorizontalInitMove + auto_scroll_routine_index) + 1
         ) % 256
@@ -286,7 +285,7 @@ class AutoScrollDrawer:
         painter.setPen(self.scroll_pen)
         painter.setBrush(self.scroll_brush)
         painter.drawEllipse(self.current_pos, 4 * self.pixel_length, 4 * self.pixel_length)
-        offsetToTop = self.current_pos.y() - (_ASCROLL_SCREEN_HEIGHT // 2 * Block.WIDTH)
+        offsetToTop = self.current_pos.y() - (_ASCROLL_SCREEN_HEIGHT // 2 * Block.HEIGHT)
         # This check is only needed if the starting position of Mario is not the default
         if offsetToTop > 0:
             self.current_pos += QPointF(1, -1) * offsetToTop
@@ -303,3 +302,27 @@ class AutoScrollDrawer:
         painter.drawLine(old_pos, self.current_pos)
         self._add_points_for_line(old_pos, self.current_pos)
         painter.drawEllipse(self.current_pos, 4 * self.pixel_length, 4 * self.pixel_length)
+
+    def _spike_ceiling_scroll(self, painter: QPainter, block_length: int):
+        #Area above two tiles scrolls to the bottom
+        painter.setPen(self.scroll_pen)
+        painter.setBrush(self.scroll_brush)
+        painter.setOpacity(0.2)
+        painter.drawRect(0, 0, self.level.width * Block.WIDTH, self.level.height * Block.HEIGHT - Block.HEIGHT * 2)
+        painter.setOpacity(1)
+
+        auto_scroll_routine_index = self.auto_scroll_row & 0b0000_0001
+        upperIndex, lowerIndex = [(0, 1), (2, 3)][auto_scroll_routine_index]
+        upperLimit = self.rom.int(Constants.AScroll_SpikeCeilVLimits + upperIndex)
+        lowerLimit = self.rom.int(Constants.AScroll_SpikeCeilVLimits + lowerIndex)
+        difference = lowerLimit - upperLimit
+
+        painter.setPen(self.acceleration_pen)
+        painter.setBrush(self.acceleration_brush)
+
+        lineBottom = QPointF(Block.WIDTH // 2, self.level.height * Block.HEIGHT - Block.HEIGHT * 2)
+        lineTop = lineBottom - QPointF(0, difference)
+
+        painter.drawEllipse(lineTop, 4 * self.pixel_length, 4 * self.pixel_length)
+        painter.drawLine(lineTop, lineBottom)
+        painter.drawEllipse(lineBottom, 4 * self.pixel_length, 4 * self.pixel_length)
