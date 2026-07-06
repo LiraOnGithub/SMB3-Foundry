@@ -251,16 +251,9 @@ class AutoScrollDrawer:
         return QPointF(scroll_x, scroll_y) * block_length
 
     def _diagonal_auto_scroll(self, painter: QPainter, block_length: int):
-        self.horizontal_speed = 0
-        self.vertical_speed = 0
-
-        painter.setPen(self.acceleration_pen)
-        painter.setBrush(self.acceleration_brush)
-
         self.current_pos = self._determine_auto_scroll_start(block_length)
 
         limitIndexes = [(0, 1), (2, 3), (4, 5), (6, 7)]
-
         for (upperIndex, lowerIndex) in limitIndexes:
             upper = self.rom.int(Constants.AutoScroll_URDiagonalLimits + upperIndex)
             lower = self.rom.int(Constants.AutoScroll_URDiagonalLimits + lowerIndex)
@@ -268,7 +261,7 @@ class AutoScrollDrawer:
 
             self._diagonal_auto_scroll_fast_forward(painter, upper)
 
-            self.current_pos.setY(336)
+            self.current_pos.setY(0xEF + _ASCROLL_SCREEN_HEIGHT // 2 * Block.HEIGHT)
 
             self._diagonal_auto_scroll_fast_forward(painter, lower)
 
@@ -289,11 +282,12 @@ class AutoScrollDrawer:
 
     def _diagonal_auto_scroll_climb(self, painter: QPainter):
         # Every two frames: x++ and y--, until we hit the top of the screen
+        old_pos = QPointF(self.current_pos)
         painter.setPen(self.scroll_pen)
         painter.setBrush(self.scroll_brush)
         painter.drawEllipse(self.current_pos, 4 * self.pixel_length, 4 * self.pixel_length)
-        old_pos = QPointF(self.current_pos)
         offsetToTop = self.current_pos.y() - (_ASCROLL_SCREEN_HEIGHT // 2 * Block.WIDTH)
+        # This check is only needed if the starting position of Mario is not the default
         if offsetToTop > 0:
             self.current_pos += QPointF(1, -1) * offsetToTop
             painter.drawLine(old_pos, self.current_pos)
@@ -306,8 +300,6 @@ class AutoScrollDrawer:
         painter.drawEllipse(self.current_pos, 4 * self.pixel_length, 4 * self.pixel_length)
         while int(self.current_pos.x() - LEVEL_SCREEN_WIDTH // 2 * Block.WIDTH) & 0xF0 != limit:
             self.current_pos += QPointF(1, 0)
-        painter.setPen(self.acceleration_pen)
-        painter.setBrush(self.acceleration_brush)
         painter.drawLine(old_pos, self.current_pos)
         self._add_points_for_line(old_pos, self.current_pos)
         painter.drawEllipse(self.current_pos, 4 * self.pixel_length, 4 * self.pixel_length)
