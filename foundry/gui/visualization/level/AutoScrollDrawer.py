@@ -54,18 +54,28 @@ class AutoScrollDrawer:
         auto_scroll_type_index = self.auto_scroll_row >> 4
         auto_scroll_routine_index = self.auto_scroll_row & 0b0001_1111
 
-        if auto_scroll_type_index in [
+        if auto_scroll_type_index in [HORIZONTAL_SCROLL_0, HORIZONTAL_SCROLL_1]:
+            self._horizontal_auto_scroll(painter, auto_scroll_type_index, auto_scroll_routine_index, block_length)
+
+        elif auto_scroll_type_index == UP_RIGHT_DIAG_SCROLL:
+            #self._horizontal_auto_scroll(painter, auto_scroll_type_index, auto_scroll_routine_index, block_length)
+            self._diagonal_auto_scroll(painter, block_length)
+            return
+
+        elif auto_scroll_type_index in [
             SPIKE_CEILING_SCROLL,
             UP_TIL_DOOR_SCROLL,
             WATER_LEVEL_SCROLL,
-            UP_RIGHT_DIAG_SCROLL,
         ]:
             # not visualized
             return
-        elif auto_scroll_type_index not in [HORIZONTAL_SCROLL_0, HORIZONTAL_SCROLL_1]:
+
+        else:
             # illegal value, those appear in the vanilla ROM, though; so error out
             return
 
+
+    def _horizontal_auto_scroll(self, painter: QPainter, auto_scroll_type_index: int, auto_scroll_routine_index: int, block_length: int):
         first_movement_command_index = (
             self.rom.int(Constants.AScroll_HorizontalInitMove + auto_scroll_routine_index) + 1
         ) % 256
@@ -239,3 +249,80 @@ class AutoScrollDrawer:
         scroll_x, scroll_y = LEVEL_SCREEN_WIDTH // 2, min(mario_y + 2, GROUND - _ASCROLL_SCREEN_HEIGHT // 2)
 
         return QPointF(scroll_x, scroll_y) * block_length
+
+    def _diagonal_auto_scroll(self, painter: QPainter, block_length: int):
+        self.horizontal_speed = 0
+        self.vertical_speed = 0
+
+        painter.setPen(self.acceleration_pen)
+        painter.setBrush(self.acceleration_brush)
+
+        self.current_pos = self._determine_auto_scroll_start(block_length)
+
+        limits = [(0x70, 0xD0), (0x60, 0xC0), (0x90, 0x30), (0xF0, 0x00)]
+        h_acceleration = 8
+        v_acceleration = -8
+
+        stop_marker = QRectF(QPoint(0, 0), QSizeF(10, 10) * self.pixel_length)
+
+        for (upper, lower) in limits:
+            self._diagonal_auto_scroll_climb(painter)
+            #old_pos = QPointF(self.current_pos)
+
+            ## Every two frames x gets increased by 1 and y decreased by 1, until we hit the top of the screen
+            #offsetToTop = self.current_pos.y() - (_ASCROLL_SCREEN_HEIGHT // 2 * Block.WIDTH)
+            #if offsetToTop > 0:
+            #    self.current_pos += QPointF(1, -1) * offsetToTop
+            #    painter.setPen(self.scroll_pen)
+            #    painter.setBrush(self.scroll_brush)
+            #    painter.drawLine(old_pos, self.current_pos)
+            #    self._add_points_for_line(old_pos, self.current_pos)
+
+            old_pos = QPointF(self.current_pos)
+            while int(self.current_pos.x() - LEVEL_SCREEN_WIDTH // 2 * block_length) & 0xF0 != upper:
+                self.current_pos += QPointF(1, 0)
+            painter.setPen(self.acceleration_pen)
+            painter.setBrush(self.acceleration_brush)
+            painter.drawLine(old_pos, self.current_pos)
+            self._add_points_for_line(old_pos, self.current_pos)
+            stop_marker.moveCenter(self.current_pos)
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.drawRect(stop_marker)
+
+            self.current_pos.setY(336)
+            old_pos = QPointF(self.current_pos)
+            stop_marker.moveCenter(self.current_pos)
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.drawRect(stop_marker)
+            while int(self.current_pos.x() - LEVEL_SCREEN_WIDTH // 2 * block_length) & 0xF0 != lower:
+                self.current_pos += QPointF(1, 0)
+            painter.setPen(self.acceleration_pen)
+            painter.setBrush(self.acceleration_brush)
+            painter.drawLine(old_pos, self.current_pos)
+            self._add_points_for_line(old_pos, self.current_pos)
+
+        self._diagonal_auto_scroll_climb(painter)
+        #old_pos = QPointF(self.current_pos)
+        #offsetToTop = self.current_pos.y() - (_ASCROLL_SCREEN_HEIGHT // 2 * Block.WIDTH)
+        #if offsetToTop > 0:
+        #    self.current_pos += QPointF(1, -1) * offsetToTop
+        #    painter.setPen(self.scroll_pen)
+        #    painter.setBrush(self.scroll_brush)
+        #    painter.drawLine(old_pos, self.current_pos)
+        #    self._add_points_for_line(old_pos, self.current_pos)
+
+        painter.setPen(self.scroll_pen)
+        painter.setBrush(self.scroll_brush)
+
+        painter.setOpacity(0.2)
+        painter.drawPolygon(self.screen_polygon)
+
+    def _diagonal_auto_scroll_climb(self, painter: QPainter):
+        old_pos = QPointF(self.current_pos)
+        offsetToTop = self.current_pos.y() - (_ASCROLL_SCREEN_HEIGHT // 2 * Block.WIDTH)
+        if offsetToTop > 0:
+            self.current_pos += QPointF(1, -1) * offsetToTop
+            painter.setPen(self.scroll_pen)
+            painter.setBrush(self.scroll_brush)
+            painter.drawLine(old_pos, self.current_pos)
+            self._add_points_for_line(old_pos, self.current_pos)
