@@ -54,23 +54,22 @@ class AutoScrollDrawer:
         auto_scroll_type_index = self.auto_scroll_row >> 4
         if auto_scroll_type_index in [HORIZONTAL_SCROLL_0, HORIZONTAL_SCROLL_1]:
             self._horizontal_auto_scroll(painter, block_length)
-            return
+
         elif auto_scroll_type_index == UP_RIGHT_DIAG_SCROLL:
             self._diagonal_auto_scroll(painter, block_length)
-            return
+
         elif auto_scroll_type_index == SPIKE_CEILING_SCROLL:
             self._spike_ceiling_scroll(painter, block_length)
-            return
+
         elif auto_scroll_type_index == UP_TIL_DOOR_SCROLL:
             self._up_til_door_scroll(painter, block_length)
-            return
+
         elif auto_scroll_type_index == WATER_LEVEL_SCROLL:
-            # not visualized
-            return
+            self._water_level_scroll(painter, block_length)
 
         else:
             # illegal value, those appear in the vanilla ROM, though; so error out
-            return
+            pass
 
 
     def _horizontal_auto_scroll(self, painter: QPainter, block_length: int):
@@ -249,10 +248,13 @@ class AutoScrollDrawer:
 
         return QPointF(scroll_x, scroll_y) * block_length
 
+    def _get_indexes_list(self, items: int) -> [(int, int)]:
+        return [(x * 2, x * 2 + 1) for x in range(items)]
+
     def _diagonal_auto_scroll(self, painter: QPainter, block_length: int):
         self.current_pos = self._determine_auto_scroll_start(block_length)
 
-        limitIndexes = [(0, 1), (2, 3), (4, 5), (6, 7)]
+        limitIndexes = self._get_indexes_list(4)
         for (upperIndex, lowerIndex) in limitIndexes:
             upper = self.rom.int(Constants.AutoScroll_URDiagonalLimits + upperIndex)
             lower = self.rom.int(Constants.AutoScroll_URDiagonalLimits + lowerIndex)
@@ -312,7 +314,7 @@ class AutoScrollDrawer:
         painter.setOpacity(1)
 
         auto_scroll_routine_index = self.auto_scroll_row & 0b0000_0001
-        upperIndex, lowerIndex = [(0, 1), (2, 3)][auto_scroll_routine_index]
+        upperIndex, lowerIndex = self._get_indexes_list(2)[auto_scroll_routine_index]
         upperLimit = self.rom.int(Constants.AScroll_SpikeCeilVLimits + upperIndex)
         lowerLimit = self.rom.int(Constants.AScroll_SpikeCeilVLimits + lowerIndex)
         difference = lowerLimit - upperLimit
@@ -342,6 +344,29 @@ class AutoScrollDrawer:
         lineBottom = QPointF(Block.WIDTH // 2, self.level.height * Block.HEIGHT - Block.HEIGHT * 2)
         painter.setPen(self.acceleration_pen)
         painter.setBrush(self.acceleration_brush)
+        painter.drawEllipse(lineTop, 4 * self.pixel_length, 4 * self.pixel_length)
+        painter.drawLine(lineTop, lineBottom)
+        painter.drawEllipse(lineBottom, 4 * self.pixel_length, 4 * self.pixel_length)
+    def _water_level_scroll(self, painter: QPainter, block_length: int):
+        #Area above two tiles scrolls to the bottom
+        painter.setPen(self.scroll_pen)
+        painter.setBrush(self.scroll_brush)
+        painter.setOpacity(0.2)
+        painter.drawRect(0, 0, self.level.width * Block.WIDTH, self.level.height * Block.HEIGHT - Block.HEIGHT * 2)
+        painter.setOpacity(1)
+
+        auto_scroll_routine_index = self.auto_scroll_row & 0b0000_0111
+        upperIndex, lowerIndex = self._get_indexes_list(7)[auto_scroll_routine_index]
+        upperLimit = self.rom.int(Constants.ASFloat_VertLimit + upperIndex)
+        lowerLimit = self.rom.int(Constants.ASFloat_VertLimit + lowerIndex)
+        difference = lowerLimit - upperLimit
+
+        painter.setPen(self.acceleration_pen)
+        painter.setBrush(self.acceleration_brush)
+
+        lineBottom = QPointF(Block.WIDTH // 2, self.level.height * Block.HEIGHT - Block.HEIGHT * 2)
+        lineTop = lineBottom - QPointF(0, difference)
+
         painter.drawEllipse(lineTop, 4 * self.pixel_length, 4 * self.pixel_length)
         painter.drawLine(lineTop, lineBottom)
         painter.drawEllipse(lineBottom, 4 * self.pixel_length, 4 * self.pixel_length)
